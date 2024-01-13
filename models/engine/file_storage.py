@@ -4,7 +4,6 @@ Contains the FileStorage class
 """
 
 import json
-import models
 from models.amenity import Amenity
 from models.base_model import BaseModel
 from models.city import City
@@ -12,7 +11,6 @@ from models.place import Place
 from models.review import Review
 from models.state import State
 from models.user import User
-from hashlib import md5
 
 classes = {"Amenity": Amenity, "BaseModel": BaseModel, "City": City,
            "Place": Place, "Review": Review, "State": State, "User": User}
@@ -46,9 +44,7 @@ class FileStorage:
         """serializes __objects to the JSON file (path: __file_path)"""
         json_objects = {}
         for key in self.__objects:
-            if key == "password":
-                json_objects[key].decode()
-            json_objects[key] = self.__objects[key].to_dict(save_fs=1)
+            json_objects[key] = self.__objects[key].to_dict()
         with open(self.__file_path, 'w') as f:
             json.dump(json_objects, f)
 
@@ -75,30 +71,34 @@ class FileStorage:
 
     def get(self, cls, id):
         """
-        Returns the object based on the class name and its ID, or
-        None if not found
+        Retrieve one object based on class and ID.
+
+        Args:
+            cls (str): The class name.
+            id (str): The object ID.
+
+        Returns:
+            obj: The object based on class and ID, or None if not found.
         """
-        if cls not in classes.values():
-            return None
-
-        all_cls = models.storage.all(cls)
-        for value in all_cls.values():
-            if (value.id == id):
-                return value
-
-        return None
+        key = f"{cls}.{id}"
+        return self.__objects.get(key, None)
 
     def count(self, cls=None):
         """
-        count the number of objects in storage
+        Count the number of objects in storage matching the given class.
+
+        Args:
+            cls (str): The class name (optional).
+
+        Returns:
+            int: The number of objects in storage matching the given class.
+                 If no class is passed, return the count of all objects.
         """
-        all_class = classes.values()
-
-        if not cls:
-            count = 0
-            for clas in all_class:
-                count += len(models.storage.all(clas).values())
+        if cls:
+            count = sum(
+                    1 for key in self.__objects
+                    if key.startswith(f"{cls}.")
+                    )
+            return count
         else:
-            count = len(models.storage.all(cls).values())
-
-        return count
+            return len(self.__objects)
